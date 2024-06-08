@@ -165,14 +165,12 @@ const getTranscription = async (transcriptId) => {
     if (status === "error") {
       console.error("Transcription error details:", transcription);
       throw new Error("Transcription failed");
+    } else if (status === "completed") {
+      return transcription;
     }
   }
 
-  if (status === "completed") {
-    return transcription;
-  } else {
-    throw new Error("Transcription failed");
-  }
+  throw new Error("Transcription failed");
 };
 
 app.get("*", (req, res) => {
