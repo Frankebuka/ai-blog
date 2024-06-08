@@ -28,10 +28,6 @@ const __dirname = path.resolve();
 
 app.use(express.static(path.join(__dirname, "/client/build")));
 
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "client", "build", "index.html"));
-});
-
 app.get("/download", async (req, res) => {
   const { url } = req.query;
 
@@ -183,6 +179,10 @@ const getTranscription = async (transcriptId) => {
     throw new Error("Transcription failed");
   }
 };
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "client", "build", "index.html"));
+});
 
 app.listen(4000, () => {
   console.log("Server is running on port 4000");
