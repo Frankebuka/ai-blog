@@ -6,12 +6,21 @@ import dotenv from "dotenv";
 import { PassThrough } from "stream";
 import ffmpeg from "fluent-ffmpeg";
 import { fileTypeFromBuffer } from "file-type";
+import path from "path";
 
 dotenv.config();
 
 const app = express();
 
 app.use(express.json());
+
+const __dirname = path.resolve();
+
+app.use(express.static(path.join(__dirname, "/client/build")));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "client", "build", "index.html"));
+});
 
 app.get("/download", async (req, res) => {
   const { url } = req.query;
