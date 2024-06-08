@@ -7,16 +7,23 @@ import { PassThrough } from "stream";
 import ffmpeg from "fluent-ffmpeg";
 import { fileTypeFromBuffer } from "file-type";
 import path from "path";
+import cors from "cors";
 
 dotenv.config();
 
 const app = express();
 
+const corsOptions = {
+  origin: "https://ai-blog-x3f1.onrender.com",
+  methods: "GET,POST,PUT,DELETE",
+  allowedHeaders: "Content-Type,Authorization",
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 const __dirname = path.resolve();
-
-app.use(express.static(path.join(__dirname, "/client/build")));
+app.use(express.static(path.join(__dirname, "client/build")));
 
 app.get("/download", async (req, res) => {
   const { url } = req.query;
@@ -31,19 +38,16 @@ app.get("/download", async (req, res) => {
     const thumbnails = info.videoDetails.thumbnails;
     const thumbnailUrl = thumbnails[thumbnails.length - 1].url;
 
-    // Download the audio
+    console.log("Downloading audio...");
     const audioStream = ytdl(url, { filter: "audioonly" });
     const audioBuffer = await streamToBuffer(audioStream);
 
-    console.log(audioBuffer);
-
-    // Detect the file type
+    console.log("Detecting file type...");
     const type = await fileTypeFromBuffer(audioBuffer);
 
-    console.log(audioBuffer);
-
-    // If the file type is not audio, re-encode it to MP3
+    let response;
     if (!type.mime.startsWith("audio/")) {
+      console.log("Re-encoding to MP3...");
       const mp3Buffer = await reencodeToMP3(audioBuffer);
       const mp3Type = await fileTypeFromBuffer(mp3Buffer);
 
@@ -51,33 +55,24 @@ app.get("/download", async (req, res) => {
         throw new Error("Invalid audio file type after re-encoding");
       }
 
-      const assemblyResponse = await sendToAssemblyAI(mp3Buffer, mp3Type);
-      const transcriptId = assemblyResponse.data.id;
-
-      const transcription = await getTranscription(transcriptId);
-      console.log("first", transcription);
-
-      res.json({
-        title,
-        thumbnailUrl,
-        text: transcription.text,
-      });
+      console.log("Sending to AssemblyAI...");
+      response = await sendToAssemblyAI(mp3Buffer, mp3Type);
     } else {
-      const assemblyResponse = await sendToAssemblyAI(audioBuffer, type);
-      const transcriptId = assemblyResponse.data.id;
-
-      const transcription = await getTranscription(transcriptId);
-      console.log("second", transcription);
-
-      res.json({
-        title,
-        thumbnailUrl,
-        text: transcription.text,
-      });
+      console.log("Sending to AssemblyAI...");
+      response = await sendToAssemblyAI(audioBuffer, type);
     }
+
+    const transcriptId = response.data.id;
+    const transcription = await getTranscription(transcriptId);
+
+    res.json({
+      title,
+      thumbnailUrl,
+      text: transcription.text,
+    });
   } catch (error) {
     console.error("Error downloading audio:", error.message);
-    res.status(500).send("Error downloading audio");
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -116,32 +111,36 @@ const sendToAssemblyAI = async (audioBuffer, type) => {
     contentType: type.mime,
   });
 
-  const uploadResponse = await axios.post(
-    "https://api.assemblyai.com/v2/upload",
-    formData,
-    {
-      headers: {
-        ...formData.getHeaders(),
-        authorization: "61ea49b34a334e818cb349797178cd2f",
+  try {
+    const uploadResponse = await axios.post(
+      "https://api.assemblyai.com/v2/upload",
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+          authorization: "61ea49b34a334e818cb349797178cd2f",
+        },
+      }
+    );
+
+    const audioUrl = uploadResponse.data.upload_url;
+    const transcriptionResponse = await axios.post(
+      "https://api.assemblyai.com/v2/transcript",
+      {
+        audio_url: audioUrl,
       },
-    }
-  );
+      {
+        headers: {
+          authorization: "61ea49b34a334e818cb349797178cd2f",
+        },
+      }
+    );
 
-  const audioUrl = uploadResponse.data.upload_url;
-
-  const transcriptionResponse = await axios.post(
-    "https://api.assemblyai.com/v2/transcript",
-    {
-      audio_url: audioUrl,
-    },
-    {
-      headers: {
-        authorization: "61ea49b34a334e818cb349797178cd2f",
-      },
-    }
-  );
-
-  return transcriptionResponse;
+    return transcriptionResponse;
+  } catch (error) {
+    console.error("Error in AssemblyAI request:", error.message);
+    throw error;
+  }
 };
 
 const getTranscription = async (transcriptId) => {
@@ -177,7 +176,7 @@ const getTranscription = async (transcriptId) => {
 };
 
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "client", "build", "index.html"));
+  res.sendFile(path.join(__dirname, "client/build/index.html"));
 });
 
 app.listen(4000, () => {
