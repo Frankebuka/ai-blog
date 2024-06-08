@@ -35,8 +35,12 @@ app.get("/download", async (req, res) => {
     const audioStream = ytdl(url, { filter: "audioonly" });
     const audioBuffer = await streamToBuffer(audioStream);
 
+    console.log(audioBuffer);
+
     // Detect the file type
     const type = await fileTypeFromBuffer(audioBuffer);
+
+    console.log(audioBuffer);
 
     // If the file type is not audio, re-encode it to MP3
     if (!type.mime.startsWith("audio/")) {
@@ -51,6 +55,7 @@ app.get("/download", async (req, res) => {
       const transcriptId = assemblyResponse.data.id;
 
       const transcription = await getTranscription(transcriptId);
+      console.log("first", transcription);
 
       res.json({
         title,
@@ -62,6 +67,7 @@ app.get("/download", async (req, res) => {
       const transcriptId = assemblyResponse.data.id;
 
       const transcription = await getTranscription(transcriptId);
+      console.log("second", transcription);
 
       res.json({
         title,
