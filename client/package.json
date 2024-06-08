@@ -26,7 +26,7 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
-  "proxy": "http://localhost:4000",
+  "proxy": "https://ai-blog-x3f1.onrender.com",
   "eslintConfig": {
     "extends": [
       "react-app",
