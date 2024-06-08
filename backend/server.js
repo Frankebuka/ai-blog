@@ -7,20 +7,10 @@ import { PassThrough } from "stream";
 import ffmpeg from "fluent-ffmpeg";
 import { fileTypeFromBuffer } from "file-type";
 import path from "path";
-import cors from "cors";
 
 dotenv.config();
 
 const app = express();
-
-const corsOptions = {
-  origin: "https://ai-blog-x3f1.onrender.com",
-  methods: "GET,POST,PUT,DELETE",
-  allowedHeaders: "Content-Type,Authorization",
-};
-
-app.use(cors(corsOptions));
-// app.options("*", cors(corsOptions));
 
 app.use(express.json());
 
