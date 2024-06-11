@@ -5,9 +5,9 @@ import FormData from "form-data";
 import dotenv from "dotenv";
 import { PassThrough } from "stream";
 import ffmpeg from "fluent-ffmpeg";
+import ffmpegStatic from "ffmpeg-static"; // Import ffmpeg-static
 import { fileTypeFromBuffer } from "file-type";
 import path from "path";
-import { log } from "console";
 
 dotenv.config();
 
@@ -16,6 +16,7 @@ const app = express();
 app.use(express.json());
 
 const __dirname = path.resolve();
+const PORT = process.env.ASSEMBLYAI_API_KEY;
 
 app.use(express.static(path.join(__dirname, "/client/build")));
 
@@ -92,7 +93,8 @@ const streamToBuffer = (stream) => {
   });
 };
 
-ffmpeg.setFfmpegPath("/opt/homebrew/bin/ffmpeg");
+// Set ffmpeg path from ffmpeg-static
+ffmpeg.setFfmpegPath(ffmpegStatic);
 
 const reencodeToMP3 = (inputBuffer) => {
   return new Promise((resolve, reject) => {
@@ -124,7 +126,7 @@ const sendToAssemblyAI = async (audioBuffer, type) => {
     {
       headers: {
         ...formData.getHeaders(),
-        authorization: "61ea49b34a334e818cb349797178cd2f",
+        authorization: process.env.ASSEMBLYAI_API_KEY, // Use environment variable for API key
       },
     }
   );
@@ -138,7 +140,7 @@ const sendToAssemblyAI = async (audioBuffer, type) => {
     },
     {
       headers: {
-        authorization: "61ea49b34a334e818cb349797178cd2f",
+        authorization: process.env.ASSEMBLYAI_API_KEY, // Use environment variable for API key
       },
     }
   );
@@ -157,7 +159,7 @@ const getTranscription = async (transcriptId) => {
       `https://api.assemblyai.com/v2/transcript/${transcriptId}`,
       {
         headers: {
-          authorization: "61ea49b34a334e818cb349797178cd2f",
+          authorization: process.env.ASSEMBLYAI_API_KEY, // Use environment variable for API key
         },
       }
     );
@@ -182,6 +184,6 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "client", "build", "index.html"));
 });
 
-app.listen(4000, () => {
-  console.log("Server is running on port 4000");
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
