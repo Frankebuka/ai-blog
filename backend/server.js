@@ -7,6 +7,7 @@ import { PassThrough } from "stream";
 import ffmpeg from "fluent-ffmpeg";
 import { fileTypeFromBuffer } from "file-type";
 import path from "path";
+import { log } from "console";
 
 dotenv.config();
 
@@ -34,6 +35,7 @@ app.get("/download", async (req, res) => {
     // Download the audio
     const audioStream = ytdl(url, { filter: "audioonly" });
     const audioBuffer = await streamToBuffer(audioStream);
+    console.log(audioBuffer);
 
     // Detect the file type
     const type = await fileTypeFromBuffer(audioBuffer);
@@ -42,15 +44,19 @@ app.get("/download", async (req, res) => {
     if (!type.mime.startsWith("audio/")) {
       const mp3Buffer = await reencodeToMP3(audioBuffer);
       const mp3Type = await fileTypeFromBuffer(mp3Buffer);
+      console.log(audioBuffer);
+      console.log(mp3Type);
 
       if (mp3Type.mime !== "audio/mpeg") {
         throw new Error("Invalid audio file type after re-encoding");
       }
 
       const assemblyResponse = await sendToAssemblyAI(mp3Buffer, mp3Type);
+      console.log(assemblyResponse);
       const transcriptId = assemblyResponse.data.id;
 
       const transcription = await getTranscription(transcriptId);
+      console.log(transcription);
 
       res.json({
         title,
@@ -59,9 +65,11 @@ app.get("/download", async (req, res) => {
       });
     } else {
       const assemblyResponse = await sendToAssemblyAI(audioBuffer, type);
+      console.log(assemblyResponse);
       const transcriptId = assemblyResponse.data.id;
 
       const transcription = await getTranscription(transcriptId);
+      console.log(transcription);
 
       res.json({
         title,
