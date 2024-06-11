@@ -16,7 +16,7 @@ const app = express();
 app.use(express.json());
 
 const __dirname = path.resolve();
-const PORT = process.env.ASSEMBLYAI_API_KEY;
+// const PORT = process.env.PORT;
 
 app.use(express.static(path.join(__dirname, "/client/build")));
 
@@ -126,7 +126,7 @@ const sendToAssemblyAI = async (audioBuffer, type) => {
     {
       headers: {
         ...formData.getHeaders(),
-        authorization: process.env.ASSEMBLYAI_API_KEY, // Use environment variable for API key
+        authorization: "61ea49b34a334e818cb349797178cd2f", // Use environment variable for API key. process.env.ASSEMBLYAI_API_KEY
       },
     }
   );
@@ -140,7 +140,7 @@ const sendToAssemblyAI = async (audioBuffer, type) => {
     },
     {
       headers: {
-        authorization: process.env.ASSEMBLYAI_API_KEY, // Use environment variable for API key
+        authorization: "61ea49b34a334e818cb349797178cd2f", // Use environment variable for API key
       },
     }
   );
@@ -159,7 +159,7 @@ const getTranscription = async (transcriptId) => {
       `https://api.assemblyai.com/v2/transcript/${transcriptId}`,
       {
         headers: {
-          authorization: process.env.ASSEMBLYAI_API_KEY, // Use environment variable for API key
+          authorization: "61ea49b34a334e818cb349797178cd2f", // Use environment variable for API key
         },
       }
     );
@@ -184,6 +184,6 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "client", "build", "index.html"));
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+app.listen(4000, () => {
+  console.log("Server is running on port 4000");
 });
