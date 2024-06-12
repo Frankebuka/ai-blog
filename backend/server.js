@@ -290,12 +290,16 @@ const reencodeToMP3 = (inputBuffer) => {
   return new Promise((resolve, reject) => {
     const outputStream = new PassThrough();
     const chunks = [];
+    const passThroughStream = new PassThrough();
+    passThroughStream.end(inputBuffer);
 
-    const command = ffmpeg()
-      .input(new PassThrough().end(inputBuffer))
+    ffmpeg(passThroughStream)
       .outputFormat("mp3")
       .on("start", (cmdline) => {
         console.log(`Started ffmpeg with command: ${cmdline}`);
+      })
+      .on("progress", (progress) => {
+        console.log(`Processing: ${progress.timemark}`);
       })
       .on("error", (err, stdout, stderr) => {
         console.error(`ffmpeg error: ${err.message}`);
@@ -313,6 +317,17 @@ const reencodeToMP3 = (inputBuffer) => {
     outputStream.on("end", () => resolve(Buffer.concat(chunks)));
   });
 };
+
+app.get("/test-reencode", async (req, res) => {
+  try {
+    // Replace with some valid static audio data
+    const inputBuffer = Buffer.from([0x00, 0x01, 0x02, 0x03, 0x04]);
+    const mp3Buffer = await reencodeToMP3(inputBuffer);
+    res.send("ffmpeg re-encoding successful");
+  } catch (error) {
+    res.status(500).send(`ffmpeg re-encoding error: ${error.message}`);
+  }
+});
 
 const sendToAssemblyAI = async (audioBuffer, type) => {
   const formData = new FormData();
