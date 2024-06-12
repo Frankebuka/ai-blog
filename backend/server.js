@@ -198,7 +198,7 @@ import ffmpeg from "fluent-ffmpeg";
 import ffmpegStatic from "ffmpeg-static"; // Import ffmpeg-static
 import { fileTypeFromBuffer } from "file-type";
 import path from "path";
-// import { exec } from "child_process";
+import { exec } from "child_process";
 
 dotenv.config();
 
@@ -324,28 +324,28 @@ const reencodeToMP3 = (inputBuffer) => {
   });
 };
 
-// app.get("/test-reencode", async (req, res) => {
-//   try {
-//     exec(
-//       "ffmpeg -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -t 1 -q:a 9 -acodec libmp3lame test.mp3",
-//       (error, stdout, stderr) => {
-//         if (error) {
-//           console.error(`ffmpeg error: ${error.message}`);
-//           return res.status(500).send(`ffmpeg error: ${error.message}`);
-//         }
-//         if (stderr) {
-//           console.error(`ffmpeg stderr: ${stderr}`);
-//           return res.status(500).send(`ffmpeg stderr: ${stderr}`);
-//         }
-//         console.log(`ffmpeg stdout: ${stdout}`);
-//         res.send(`ffmpeg stdout: ${stdout}`);
-//       }
-//     );
-//   } catch (err) {
-//     console.error("Unexpected error:", err);
-//     res.status(500).send("Unexpected error occurred");
-//   }
-// });
+app.get("/test-reencode", async (req, res) => {
+  try {
+    exec(
+      "ffmpeg -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -t 1 -q:a 9 -acodec libmp3lame test.mp3",
+      (error, stdout, stderr) => {
+        if (error) {
+          console.error(`ffmpeg error: ${error.message}`);
+          return res.status(500).send(`ffmpeg error: ${error.message}`);
+        }
+        if (stderr) {
+          console.error(`ffmpeg stderr: ${stderr}`);
+          return res.status(500).send(`ffmpeg stderr: ${stderr}`);
+        }
+        console.log(`ffmpeg stdout: ${stdout}`);
+        res.send(`ffmpeg stdout: ${stdout}`);
+      }
+    );
+  } catch (err) {
+    console.error("Unexpected error:", err);
+    res.status(500).send("Unexpected error occurred");
+  }
+});
 
 const sendToAssemblyAI = async (audioBuffer, type) => {
   const formData = new FormData();
