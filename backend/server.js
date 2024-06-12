@@ -295,6 +295,7 @@ const reencodeToMP3 = (inputBuffer) => {
     passThroughStream.end(inputBuffer);
 
     ffmpeg(passThroughStream)
+      .inputFormat("webm") // Specify input format
       .outputFormat("mp3")
       .on("start", (cmdline) => {
         console.log(`Started ffmpeg with command: ${cmdline}`);
@@ -306,12 +307,7 @@ const reencodeToMP3 = (inputBuffer) => {
         console.error(`ffmpeg error: ${err.message}`);
         console.error(`ffmpeg stdout: ${stdout}`);
         console.error(`ffmpeg stderr: ${stderr}`);
-        const errorMessage = `ffmpeg exited with code ${
-          err.code
-        }\nffmpeg stdout: ${stdout || "undefined"}\nffmpeg stderr: ${
-          stderr || "undefined"
-        }`;
-        reject(new Error(errorMessage));
+        reject(new Error(`ffmpeg exited with code ${err.code}`));
       })
       .on("end", () => {
         console.log("ffmpeg finished processing");
@@ -324,28 +320,28 @@ const reencodeToMP3 = (inputBuffer) => {
   });
 };
 
-app.get("/test-reencode", async (req, res) => {
-  try {
-    exec(
-      "ffmpeg -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -t 1 -q:a 9 -acodec libmp3lame test.mp3",
-      (error, stdout, stderr) => {
-        if (error) {
-          console.error(`ffmpeg error: ${error.message}`);
-          return res.status(500).send(`ffmpeg error: ${error.message}`);
-        }
-        if (stderr) {
-          console.error(`ffmpeg stderr: ${stderr}`);
-          return res.status(500).send(`ffmpeg stderr: ${stderr}`);
-        }
-        console.log(`ffmpeg stdout: ${stdout}`);
-        res.send(`ffmpeg stdout: ${stdout}`);
-      }
-    );
-  } catch (err) {
-    console.error("Unexpected error:", err);
-    res.status(500).send("Unexpected error occurred");
-  }
-});
+// app.get("/test-reencode", async (req, res) => {
+//   try {
+//     exec(
+//       "ffmpeg -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -t 1 -q:a 9 -acodec libmp3lame test.mp3",
+//       (error, stdout, stderr) => {
+//         if (error) {
+//           console.error(`ffmpeg error: ${error.message}`);
+//           return res.status(500).send(`ffmpeg error: ${error.message}`);
+//         }
+//         if (stderr) {
+//           console.error(`ffmpeg stderr: ${stderr}`);
+//           return res.status(500).send(`ffmpeg stderr: ${stderr}`);
+//         }
+//         console.log(`ffmpeg stdout: ${stdout}`);
+//         res.send(`ffmpeg stdout: ${stdout}`);
+//       }
+//     );
+//   } catch (err) {
+//     console.error("Unexpected error:", err);
+//     res.status(500).send("Unexpected error occurred");
+//   }
+// });
 
 const sendToAssemblyAI = async (audioBuffer, type) => {
   const formData = new FormData();
