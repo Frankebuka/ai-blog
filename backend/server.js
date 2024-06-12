@@ -309,6 +309,7 @@ const reencodeToMP3 = (inputBuffer) => {
         console.error(`ffmpeg error: ${err.message}`);
         console.error(`ffmpeg stdout: ${stdout}`);
         console.error(`ffmpeg stderr: ${stderr}`);
+        fs.unlinkSync(tempFilePath); // Clean up temp file
         reject(new Error(`ffmpeg exited with code ${err.code}`));
       })
       .on("end", () => {
@@ -323,28 +324,17 @@ const reencodeToMP3 = (inputBuffer) => {
   });
 };
 
-// app.get("/test-reencode", async (req, res) => {
-//   try {
-//     exec(
-//       "ffmpeg -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -t 1 -q:a 9 -acodec libmp3lame test.mp3",
-//       (error, stdout, stderr) => {
-//         if (error) {
-//           console.error(`ffmpeg error: ${error.message}`);
-//           return res.status(500).send(`ffmpeg error: ${error.message}`);
-//         }
-//         if (stderr) {
-//           console.error(`ffmpeg stderr: ${stderr}`);
-//           return res.status(500).send(`ffmpeg stderr: ${stderr}`);
-//         }
-//         console.log(`ffmpeg stdout: ${stdout}`);
-//         res.send(`ffmpeg stdout: ${stdout}`);
-//       }
-//     );
-//   } catch (err) {
-//     console.error("Unexpected error:", err);
-//     res.status(500).send("Unexpected error occurred");
-//   }
-// });
+app.get("/ffmpeg-version", (req, res) => {
+  exec("ffmpeg -version", (error, stdout, stderr) => {
+    if (error) {
+      return res.status(500).send(`ffmpeg error: ${error.message}`);
+    }
+    if (stderr) {
+      return res.status(500).send(`ffmpeg stderr: ${stderr}`);
+    }
+    res.send(`ffmpeg stdout: ${stdout}`);
+  });
+});
 
 const sendToAssemblyAI = async (audioBuffer, type) => {
   const formData = new FormData();
