@@ -306,7 +306,12 @@ const reencodeToMP3 = (inputBuffer) => {
         console.error(`ffmpeg error: ${err.message}`);
         console.error(`ffmpeg stdout: ${stdout}`);
         console.error(`ffmpeg stderr: ${stderr}`);
-        reject(new Error(`ffmpeg exited with code ${err.code}`));
+        const errorMessage = `ffmpeg exited with code ${
+          err.code
+        }\nffmpeg stdout: ${stdout || "undefined"}\nffmpeg stderr: ${
+          stderr || "undefined"
+        }`;
+        reject(new Error(errorMessage));
       })
       .on("end", () => {
         console.log("ffmpeg finished processing");
