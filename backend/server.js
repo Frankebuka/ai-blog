@@ -291,36 +291,48 @@ ffmpeg.setFfmpegPath(ffmpegStatic);
 
 const reencodeToMP3 = (inputBuffer) => {
   return new Promise((resolve, reject) => {
-    const tempFilePath = path.join(os.tmpdir(), "tempfile.webm");
-    fs.writeFileSync(tempFilePath, inputBuffer);
+    const tempFilePath = path.join("/tmp", "tempfile.webm"); // Use /tmp instead of os.tmpdir()
+    fs.writeFile(tempFilePath, inputBuffer, (err) => {
+      if (err) {
+        return reject(new Error(`Error writing temp file: ${err.message}`));
+      }
 
-    const outputStream = new PassThrough();
-    const chunks = [];
+      const outputStream = new PassThrough();
+      const chunks = [];
 
-    ffmpeg(tempFilePath)
-      .outputFormat("mp3")
-      .on("start", (cmdline) => {
-        console.log(`Started ffmpeg with command: ${cmdline}`);
-      })
-      .on("progress", (progress) => {
-        console.log(`Processing: ${progress.timemark}`);
-      })
-      .on("error", (err, stdout, stderr) => {
-        console.error(`ffmpeg error: ${err.message}`);
-        console.error(`ffmpeg stdout: ${stdout}`);
-        console.error(`ffmpeg stderr: ${stderr}`);
-        fs.unlinkSync(tempFilePath); // Clean up temp file
-        reject(new Error(`ffmpeg exited with code ${err.code}`));
-      })
-      .on("end", () => {
-        console.log("ffmpeg finished processing");
-        fs.unlinkSync(tempFilePath); // Clean up temp file
+      ffmpeg(tempFilePath)
+        .inputFormat("webm")
+        .outputFormat("mp3")
+        .on("start", (cmdline) => {
+          console.log(`Started ffmpeg with command: ${cmdline}`);
+        })
+        .on("progress", (progress) => {
+          console.log(`Processing: ${progress.timemark}`);
+        })
+        .on("error", (err, stdout, stderr) => {
+          console.error(`ffmpeg error: ${err.message}`);
+          console.error(`ffmpeg stdout: ${stdout}`);
+          console.error(`ffmpeg stderr: ${stderr}`);
+          fs.unlink(tempFilePath, () => {
+            reject(new Error(`ffmpeg exited with code ${err.code}`));
+          });
+        })
+        .on("end", () => {
+          console.log("ffmpeg finished processing");
+          fs.unlink(tempFilePath, () => {
+            resolve(Buffer.concat(chunks));
+          });
+        })
+        .pipe(outputStream);
+
+      outputStream.on("data", (chunk) => chunks.push(chunk));
+      outputStream.on("error", (err) => {
+        reject(new Error(`Output stream error: ${err.message}`));
+      });
+      outputStream.on("end", () => {
         resolve(Buffer.concat(chunks));
-      })
-      .pipe(outputStream);
-
-    outputStream.on("data", (chunk) => chunks.push(chunk));
-    outputStream.on("end", () => resolve(Buffer.concat(chunks)));
+      });
+    });
   });
 };
 
