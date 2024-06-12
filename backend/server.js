@@ -198,7 +198,9 @@ import ffmpeg from "fluent-ffmpeg";
 import ffmpegStatic from "ffmpeg-static"; // Import ffmpeg-static
 import { fileTypeFromBuffer } from "file-type";
 import path from "path";
-import { exec } from "child_process";
+import fs from "fs";
+import os from "os";
+// import { exec } from "child_process";
 
 dotenv.config();
 
@@ -289,13 +291,13 @@ ffmpeg.setFfmpegPath(ffmpegStatic);
 
 const reencodeToMP3 = (inputBuffer) => {
   return new Promise((resolve, reject) => {
+    const tempFilePath = path.join(os.tmpdir(), "tempfile.webm");
+    fs.writeFileSync(tempFilePath, inputBuffer);
+
     const outputStream = new PassThrough();
     const chunks = [];
-    const passThroughStream = new PassThrough();
-    passThroughStream.end(inputBuffer);
 
-    ffmpeg(passThroughStream)
-      .inputFormat("webm") // Specify input format
+    ffmpeg(tempFilePath)
       .outputFormat("mp3")
       .on("start", (cmdline) => {
         console.log(`Started ffmpeg with command: ${cmdline}`);
@@ -311,6 +313,7 @@ const reencodeToMP3 = (inputBuffer) => {
       })
       .on("end", () => {
         console.log("ffmpeg finished processing");
+        fs.unlinkSync(tempFilePath); // Clean up temp file
         resolve(Buffer.concat(chunks));
       })
       .pipe(outputStream);
