@@ -195,11 +195,10 @@ import FormData from "form-data";
 import dotenv from "dotenv";
 import { PassThrough } from "stream";
 import ffmpeg from "fluent-ffmpeg";
-import ffmpegStatic from "ffmpeg-static"; // Import ffmpeg-static
+import ffmpegStatic from "ffmpeg-static";
 import { fileTypeFromBuffer } from "file-type";
 import path from "path";
 import fs from "fs";
-import os from "os";
 import { exec } from "child_process";
 
 dotenv.config();
@@ -209,74 +208,12 @@ const app = express();
 app.use(express.json());
 
 const __dirname = path.resolve();
-
 app.use(express.static(path.join(__dirname, "/client/build")));
 
-app.get("/download", async (req, res) => {
-  const { url } = req.query;
+// Set ffmpeg path from ffmpeg-static
+ffmpeg.setFfmpegPath(ffmpegStatic);
 
-  try {
-    if (!ytdl.validateURL(url)) {
-      throw new Error("Invalid YouTube URL");
-    }
-
-    const info = await ytdl.getInfo(url);
-    const title = info.videoDetails.title;
-    const thumbnails = info.videoDetails.thumbnails;
-    const thumbnailUrl = thumbnails[thumbnails.length - 1].url;
-
-    // Download the audio
-    const audioStream = ytdl(url, { filter: "audioonly" });
-    const audioBuffer = await streamToBuffer(audioStream);
-    console.log("Audio Buffer Length:", audioBuffer.length);
-
-    // Detect the file type
-    const type = await fileTypeFromBuffer(audioBuffer);
-    console.log("Detected File Type:", type);
-
-    // If the file type is not audio, re-encode it to MP3
-    if (!type.mime.startsWith("audio/")) {
-      const mp3Buffer = await reencodeToMP3(audioBuffer);
-      const mp3Type = await fileTypeFromBuffer(mp3Buffer);
-      console.log("Re-encoded MP3 Buffer Length:", mp3Buffer.length);
-      console.log("Re-encoded MP3 Type:", mp3Type);
-
-      if (mp3Type.mime !== "audio/mpeg") {
-        throw new Error("Invalid audio file type after re-encoding");
-      }
-
-      const assemblyResponse = await sendToAssemblyAI(mp3Buffer, mp3Type);
-      console.log("AssemblyAI Response:", assemblyResponse);
-      const transcriptId = assemblyResponse.data.id;
-
-      const transcription = await getTranscription(transcriptId);
-      console.log("Transcription:", transcription);
-
-      res.json({
-        title,
-        thumbnailUrl,
-        text: transcription.text,
-      });
-    } else {
-      const assemblyResponse = await sendToAssemblyAI(audioBuffer, type);
-      console.log("AssemblyAI Response:", assemblyResponse);
-      const transcriptId = assemblyResponse.data.id;
-
-      const transcription = await getTranscription(transcriptId);
-      console.log("Transcription:", transcription);
-
-      res.json({
-        title,
-        thumbnailUrl,
-        text: transcription.text,
-      });
-    }
-  } catch (error) {
-    console.error("Error downloading audio:", error.message);
-    res.status(500).send("Error downloading audio");
-  }
-});
-
+// Helper function to convert stream to buffer
 const streamToBuffer = (stream) => {
   return new Promise((resolve, reject) => {
     const bufferArray = [];
@@ -286,9 +223,7 @@ const streamToBuffer = (stream) => {
   });
 };
 
-// Set ffmpeg path from ffmpeg-static
-ffmpeg.setFfmpegPath(ffmpegStatic);
-
+// Re-encode audio buffer to MP3 format
 const reencodeToMP3 = (inputBuffer) => {
   return new Promise((resolve, reject) => {
     const tempFilePath = path.join("/tmp", "tempfile.webm"); // Use /tmp instead of os.tmpdir()
@@ -336,18 +271,7 @@ const reencodeToMP3 = (inputBuffer) => {
   });
 };
 
-app.get("/ffmpeg-version", (req, res) => {
-  exec("ffmpeg -version", (error, stdout, stderr) => {
-    if (error) {
-      return res.status(500).send(`ffmpeg error: ${error.message}`);
-    }
-    if (stderr) {
-      return res.status(500).send(`ffmpeg stderr: ${stderr}`);
-    }
-    res.send(`ffmpeg stdout: ${stdout}`);
-  });
-});
-
+// Send audio buffer to AssemblyAI for transcription
 const sendToAssemblyAI = async (audioBuffer, type) => {
   const formData = new FormData();
   formData.append("audio", audioBuffer, {
@@ -383,6 +307,7 @@ const sendToAssemblyAI = async (audioBuffer, type) => {
   return transcriptionResponse;
 };
 
+// Get transcription result from AssemblyAI
 const getTranscription = async (transcriptId) => {
   let status = "processing";
   let transcription = null;
@@ -415,10 +340,88 @@ const getTranscription = async (transcriptId) => {
   }
 };
 
+// Endpoint to download and process YouTube audio
+app.get("/download", async (req, res) => {
+  const { url } = req.query;
+
+  try {
+    if (!ytdl.validateURL(url)) {
+      throw new Error("Invalid YouTube URL");
+    }
+
+    const info = await ytdl.getInfo(url);
+    const title = info.videoDetails.title;
+    const thumbnails = info.videoDetails.thumbnails;
+    const thumbnailUrl = thumbnails[thumbnails.length - 1].url;
+
+    const audioStream = ytdl(url, { filter: "audioonly" });
+    const audioBuffer = await streamToBuffer(audioStream);
+    console.log("Audio Buffer Length:", audioBuffer.length);
+
+    const type = await fileTypeFromBuffer(audioBuffer);
+    console.log("Detected File Type:", type);
+
+    if (!type.mime.startsWith("audio/")) {
+      const mp3Buffer = await reencodeToMP3(audioBuffer);
+      const mp3Type = await fileTypeFromBuffer(mp3Buffer);
+      console.log("Re-encoded MP3 Buffer Length:", mp3Buffer.length);
+      console.log("Re-encoded MP3 Type:", mp3Type);
+
+      if (mp3Type.mime !== "audio/mpeg") {
+        throw new Error("Invalid audio file type after re-encoding");
+      }
+
+      const assemblyResponse = await sendToAssemblyAI(mp3Buffer, mp3Type);
+      console.log("AssemblyAI Response:", assemblyResponse);
+      const transcriptId = assemblyResponse.data.id;
+
+      const transcription = await getTranscription(transcriptId);
+      console.log("Transcription:", transcription);
+
+      res.json({
+        title,
+        thumbnailUrl,
+        text: transcription.text,
+      });
+    } else {
+      const assemblyResponse = await sendToAssemblyAI(audioBuffer, type);
+      console.log("AssemblyAI Response:", assemblyResponse);
+      const transcriptId = assemblyResponse.data.id;
+
+      const transcription = await getTranscription(transcriptId);
+      console.log("Transcription:", transcription);
+
+      res.json({
+        title,
+        thumbnailUrl,
+        text: transcription.text,
+      });
+    }
+  } catch (error) {
+    console.error("Error downloading audio:", error.message);
+    res.status(500).send("Error downloading audio");
+  }
+});
+
+// Endpoint to get ffmpeg version
+app.get("/ffmpeg-version", (req, res) => {
+  exec("ffmpeg -version", (error, stdout, stderr) => {
+    if (error) {
+      return res.status(500).send(`ffmpeg error: ${error.message}`);
+    }
+    if (stderr) {
+      return res.status(500).send(`ffmpeg stderr: ${stderr}`);
+    }
+    res.send(`ffmpeg stdout: ${stdout}`);
+  });
+});
+
+// Serve client build files
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "client", "build", "index.html"));
 });
 
+// Start the server
 app.listen(4000, () => {
   console.log("Server is running on port 4000");
 });
