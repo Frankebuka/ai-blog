@@ -381,18 +381,6 @@ const getTranscription = async (transcriptId) => {
   }
 };
 
-app.get("/test-reencode", async (req, res) => {
-  try {
-    const inputBuffer = Buffer.from([
-      /* some static audio data */
-    ]);
-    const mp3Buffer = await reencodeToMP3(inputBuffer);
-    res.send("ffmpeg re-encoding successful");
-  } catch (error) {
-    res.status(500).send(`ffmpeg re-encoding error: ${error.message}`);
-  }
-});
-
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "client", "build", "index.html"));
 });

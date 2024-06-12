@@ -25,14 +25,6 @@ const GenerateArticles = () => {
     }
     setLoading(true);
     try {
-      const res = await fetch(
-        "https://ai-blog-x3f1.onrender.com/test-reencode"
-      );
-      if (!res.ok) {
-        throw new Error("Failed to fetch");
-      }
-      await res.json();
-
       // Fetch data from the server
       const response = await fetch(
         `https://ai-blog-x3f1.onrender.com/download?url=${encodeURIComponent(
