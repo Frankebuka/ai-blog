@@ -225,28 +225,29 @@ app.get("/download", async (req, res) => {
     // Download the audio
     const audioStream = ytdl(url, { filter: "audioonly" });
     const audioBuffer = await streamToBuffer(audioStream);
-    console.log(audioBuffer);
+    console.log("Audio Buffer Length:", audioBuffer.length);
 
     // Detect the file type
     const type = await fileTypeFromBuffer(audioBuffer);
+    console.log("Detected File Type:", type);
 
     // If the file type is not audio, re-encode it to MP3
     if (!type.mime.startsWith("audio/")) {
       const mp3Buffer = await reencodeToMP3(audioBuffer);
       const mp3Type = await fileTypeFromBuffer(mp3Buffer);
-      console.log(mp3Buffer);
-      console.log(mp3Type);
+      console.log("Re-encoded MP3 Buffer Length:", mp3Buffer.length);
+      console.log("Re-encoded MP3 Type:", mp3Type);
 
       if (mp3Type.mime !== "audio/mpeg") {
         throw new Error("Invalid audio file type after re-encoding");
       }
 
       const assemblyResponse = await sendToAssemblyAI(mp3Buffer, mp3Type);
-      console.log(assemblyResponse);
+      console.log("AssemblyAI Response:", assemblyResponse);
       const transcriptId = assemblyResponse.data.id;
 
       const transcription = await getTranscription(transcriptId);
-      console.log(transcription);
+      console.log("Transcription:", transcription);
 
       res.json({
         title,
@@ -255,11 +256,11 @@ app.get("/download", async (req, res) => {
       });
     } else {
       const assemblyResponse = await sendToAssemblyAI(audioBuffer, type);
-      console.log(assemblyResponse);
+      console.log("AssemblyAI Response:", assemblyResponse);
       const transcriptId = assemblyResponse.data.id;
 
       const transcription = await getTranscription(transcriptId);
-      console.log(transcription);
+      console.log("Transcription:", transcription);
 
       res.json({
         title,
@@ -302,7 +303,7 @@ const reencodeToMP3 = (inputBuffer) => {
         reject(err);
       })
       .on("end", () => {
-        console.log("Processing finished !");
+        console.log("Processing finished!");
         resolve(Buffer.concat(chunks));
       })
       .pipe(outputStream);
