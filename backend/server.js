@@ -294,16 +294,17 @@ const reencodeToMP3 = (inputBuffer) => {
     const command = ffmpeg()
       .input(new PassThrough().end(inputBuffer))
       .outputFormat("mp3")
-      .on("start", (commandLine) => {
-        console.log("Spawned Ffmpeg with command: " + commandLine);
+      .on("start", (cmdline) => {
+        console.log(`Started ffmpeg with command: ${cmdline}`);
       })
       .on("error", (err, stdout, stderr) => {
-        console.error("Error: ", err.message);
-        console.error("ffmpeg stderr: ", stderr);
-        reject(err);
+        console.error(`ffmpeg error: ${err.message}`);
+        console.error(`ffmpeg stdout: ${stdout}`);
+        console.error(`ffmpeg stderr: ${stderr}`);
+        reject(new Error(`ffmpeg exited with code ${err.code}`));
       })
       .on("end", () => {
-        console.log("Processing finished!");
+        console.log("ffmpeg finished processing");
         resolve(Buffer.concat(chunks));
       })
       .pipe(outputStream);
@@ -379,6 +380,18 @@ const getTranscription = async (transcriptId) => {
     throw new Error("Transcription failed");
   }
 };
+
+app.get("/test-reencode", async (req, res) => {
+  try {
+    const inputBuffer = Buffer.from([
+      /* some static audio data */
+    ]);
+    const mp3Buffer = await reencodeToMP3(inputBuffer);
+    res.send("ffmpeg re-encoding successful");
+  } catch (error) {
+    res.status(500).send(`ffmpeg re-encoding error: ${error.message}`);
+  }
+});
 
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "client", "build", "index.html"));
